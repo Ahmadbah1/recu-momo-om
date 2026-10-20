@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Reçu MoMo / OM</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+    <style>
+        :root { --momo-orange: #ff6600; --momo-yellow: #ffcc00; --bg-color: #f4f6f9; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg-color); padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
+        h2 { font-size: 1.1rem; margin-bottom: 15px; color: #111; }
+        .upload-box { border: 2px dashed #007bff; background: #f0f7ff; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: .2s; }
+        .upload-box:hover { background: #e1f0ff; }
+        .upload-box input { display: none; }
+        .upload-label { font-size: .85rem; font-weight: 600; color: #007bff; cursor: pointer; }
+        #ocr-status { font-size: .75rem; margin-top: 5px; color: #666; font-weight: bold; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 5px; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: .95rem; outline: none; }
+        input:focus, select:focus { border-color: var(--momo-orange); }
+        .receipt-wrapper { display: flex; flex-direction: column; align-items: center; }
+        .receipt { background: #fff; width: 100%; max-width: 330px; padding: 20px; font-family: 'Courier New', Courier, monospace; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.1); border-top: 6px solid var(--momo-yellow); }
+        .receipt * { font-family: 'Courier New', Courier, monospace; }
+        .receipt-header { text-align: center; margin-bottom: 10px; }
+        .store-title { font-size: 1.1rem; font-weight: bold; text-transform: uppercase; }
+        .store-sub { font-size: .75rem; color: #666; }
+        .divider { border-bottom: 1px dashed #aaa; margin: 12px 0; }
+        .line { display: flex; justify-content: space-between; gap: 10px; font-size: .82rem; margin-bottom: 6px; }
+        .line .label { color: #555; margin: 0; font-weight: normal; }
+        .line .val { font-weight: bold; text-align: right; word-break: break-word; }
+        .amount-badge { background: #f8f9fa; border: 1px solid #eee; padding: 10px; text-align: center; margin: 12px 0; border-radius: 6px; }
+        .amount-badge .amt { font-size: 1.4rem; font-weight: bold; color: #111; }
+        .status-ok { text-align: center; font-size: .8rem; color: #2e7d32; font-weight: bold; letter-spacing: 1px; }
+        .receipt-footer { text-align: center; font-size: .7rem; color: #888; margin-top: 15px; }
+        .disclaimer { font-size: .62rem; color: #999; margin-top: 8px; }
+        .actions { width: 100%; max-width: 330px; margin-top: 15px; display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: .9rem; cursor: pointer; transition: .2s; text-align: center; }
+        .btn-whatsapp { background: #25D366; color: #fff; }
+        .btn-print { background: #333; color: #fff; }
+        .btn:hover { opacity: .9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>Charger un Screenshot SMS (OCR)</h2>
+        <div class="upload-box" onclick="document.getElementById('screenshotInput').click()">
+            <span class="upload-label">📸 Prenez ou déposez une capture d'écran</span>
+            <input type="file" id="screenshotInput" accept="image/*" onchange="processScreenshot(event)">
+            <div id="ocr-status">Saisie manuelle possible ci-dessous</div>
+        </div>
+
+        <h2>Détails du Paiement</h2>
+
+        <div class="form-group"><label>Nom de la Boutique</label>
+            <input type="text" id="in-store" value="BOUTIQUE EXCELLENCE" oninput="updateReceipt()"></div>
+        <div class="form-group"><label>Ville / Adresse</label>
+            <input type="text" id="in-city" value="Yaoundé, Cameroun" oninput="updateReceipt()"></div>
+        <div class="form-group"><label>Opérateur</label>
+            <select id="in-op" onchange="updateReceipt()">
+                <option value="MTN Mobile Money">MTN Mobile Money</option>
+                <option value="Orange Money">Orange Money</option>
+            </select></div>
+        <div class="form-group"><label>Date et heure</label>
+            <input type="text" id="in-date" oninput="updateReceipt()"></div>
+        <div class="form-group"><label>ID de Transaction (TxID)</label>
+            <input type="text" id="in-txid" value="261013.1430.F9982" oninput="updateReceipt()"></div>
+        <div class="form-group"><label>Nom du Client</label>
+            <input type="text" id="in-client" value="Ahmadou Hayatou" oninput="updateReceipt()"></div>
+        <div class="form-group"><label>Montant (FCFA)</label>
+            <input type="number" id="in-amount" value="15000" min="0" oninput="updateReceipt()"></div>
+        <div class="form-group"><label>Article / Motif</label>
+            <input type="text" id="in-item" value="Achat de Marchandises" oninput="updateReceipt()"></div>
+    </div>
+
+    <div class="receipt-wrapper">
+        <div class="receipt" id="receipt">
+            <div class="receipt-header">
+                <div class="store-title" id="out-store">BOUTIQUE EXCELLENCE</div>
+                <div class="store-sub" id="out-city">Yaoundé, Cameroun</div>
+            </div>
+            <div class="divider"></div>
+            <div class="line"><span class="label">Date :</span><span class="val" id="out-date">--/--/----</span></div>
+            <div class="line"><span class="label">Opérateur :</span><span class="val" id="out-op">MTN Mobile Money</span></div>
+            <div class="line"><span class="label">TxID :</span><span class="val" id="out-txid">261013.1430.F9982</span></div>
+            <div class="line"><span class="label">Client :</span><span class="val" id="out-client">Ahmadou Hayatou</span></div>
+            <div class="divider"></div>
+            <div class="line"><span class="label">Motif :</span><span class="val" id="out-item">Achat de Marchandises</span></div>
+            <div class="amount-badge"><div class="amt" id="out-amount">15 000 FCFA</div></div>
+            <div class="status-ok">✔ PAIEMENT CONFIRMÉ</div>
+            <div class="divider"></div>
+            <div class="receipt-footer">
+                Merci de votre confiance !<br>
+                Reçu généré par ImportCam Pay
+                <div class="disclaimer">Reçu établi par le commerçant, non officiel MTN / Orange.</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-whatsapp" onclick="shareWhatsApp()">WhatsApp</button>
+            <button class="btn btn-print" onclick="downloadImage()">Télécharger</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    function setTodayDate() {
+        const now = new Date();
+        $('in-date').value = now.toLocaleDateString('fr-FR') + ' ' +
+            now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function updateReceipt() {
+        $('out-store').innerText = $('in-store').value || 'MA BOUTIQUE';
+        $('out-city').innerText = $('in-city').value || 'Cameroun';
+        $('out-date').innerText = $('in-date').value || '-';
+        $('out-op').innerText = $('in-op').value;
+        $('out-txid').innerText = $('in-txid').value || '-';
+        $('out-client').innerText = $('in-client').value || '-';
+        $('out-item').innerText = $('in-item').value || '-';
+
+        $('receipt').style.borderTopColor = ($('in-op').value === 'Orange Money') ? '#ff6600' : '#ffcc00';
+
+        const rawAmt = Number($('in-amount').value) || 0;
+        $('out-amount').innerText = new Intl.NumberFormat('fr-FR').format(rawAmt) + ' FCFA';
+    }
+
+    /* --- OCR (Tesseract.js) --- */
+    async function processScreenshot(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const statusEl = $('ocr-status');
+        statusEl.style.color = '#007bff';
+        statusEl.innerText = '⏳ Analyse du SMS en cours...';
+
+        try {
+            const result = await Tesseract.recognize(file, 'fra+eng');
+            parseSmsText(result.data.text);
+            statusEl.style.color = 'green';
+            statusEl.innerText = '✅ Données extraites ! Vérifiez-les avant de partager.';
+        } catch (err) {
+            console.error(err);
+            statusEl.style.color = 'red';
+            statusEl.innerText = '❌ Erreur de lecture. Saisissez manuellement.';
+        }
+        event.target.value = '';
+    }
+
+    function parseSmsText(text) {
+        if (/orange/i.test(text)) $('in-op').value = 'Orange Money';
+        else if (/momo|mtn/i.test(text)) $('in-op').value = 'MTN Mobile Money';
+
+        // Montant : on privilégie un mot-clé (payé, reçu, montant...), sinon le premier montant en FCFA
+        const amountMatch =
+            text.match(/(?:montant|pay[ée]|re[çc]u|envoy[ée]|transf[ée]r[ée])\D{0,25}(\d[\d\s.,]*)\s*(?:FCFA|XAF|F\b)/i) ||
+            text.match(/(\d[\d\s.,]*)\s*(?:FCFA|XAF)/i);
+        if (amountMatch) {
+            const clean = amountMatch[1].trim().replace(/[.,]\d{1,2}$/, '').replace(/\D/g, '');
+            if (clean) $('in-amount').value = clean;
+        }
+
+        // TxID
+        const txidMatch = text.match(/(?:Trans(?:action)?\s*(?:ID|Id)?|TxId|ID)\s*[:.]?\s*([A-Za-z0-9.]{6,})/i);
+        if (txidMatch) $('in-txid').value = txidMatch[1];
+
+        // Nom du client
+        const clientMatch = text.match(/(?:de la part de|de|par)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){1,3})/);
+        if (clientMatch) $('in-client').value = clientMatch[1].trim();
+
+        updateReceipt();
+    }
+
+    function downloadImage() {
+        html2canvas($('receipt'), { scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            const safeId = ($('in-txid').value || 'recu').replace(/[^\w.-]/g, '_');
+            link.download = `Recu_${safeId}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    function shareWhatsApp() {
+        const text =
+            `*--- REÇU DE PAIEMENT - ${$('in-store').value} ---*\n` +
+            `👤 *Client :* ${$('in-client').value}\n` +
+            `🛍️ *Motif :* ${$('in-item').value}\n` +
+            `💰 *Montant :* ${$('out-amount').innerText}\n` +
+            `🔢 *TxID :* ${$('in-txid').value}\n` +
+            `✅ *Statut :* Paiement Confirmé\n\n` +
+            `_Merci pour votre achat !_`;
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    }
+
+    setTodayDate();
+    updateReceipt();
+</script>
+
+</body>
+</html>
