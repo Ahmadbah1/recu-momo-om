@@ -1,209 +1,269 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de Reçu MoMo / OM</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-    <style>
-        :root { --momo-orange: #ff6600; --momo-yellow: #ffcc00; --bg-color: #f4f6f9; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
-        .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
-        h2 { font-size: 1.1rem; margin-bottom: 15px; color: #111; }
-        .upload-box { border: 2px dashed #007bff; background: #f0f7ff; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: .2s; }
-        .upload-box:hover { background: #e1f0ff; }
-        .upload-box input { display: none; }
-        .upload-label { font-size: .85rem; font-weight: 600; color: #007bff; cursor: pointer; }
-        #ocr-status { font-size: .75rem; margin-top: 5px; color: #666; font-weight: bold; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 5px; color: #555; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: .95rem; outline: none; }
-        input:focus, select:focus { border-color: var(--momo-orange); }
-        .receipt-wrapper { display: flex; flex-direction: column; align-items: center; }
-        .receipt { background: #fff; width: 100%; max-width: 330px; padding: 20px; font-family: 'Courier New', Courier, monospace; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,.1); border-top: 6px solid var(--momo-yellow); }
-        .receipt * { font-family: 'Courier New', Courier, monospace; }
-        .receipt-header { text-align: center; margin-bottom: 10px; }
-        .store-title { font-size: 1.1rem; font-weight: bold; text-transform: uppercase; }
-        .store-sub { font-size: .75rem; color: #666; }
-        .divider { border-bottom: 1px dashed #aaa; margin: 12px 0; }
-        .line { display: flex; justify-content: space-between; gap: 10px; font-size: .82rem; margin-bottom: 6px; }
-        .line .label { color: #555; margin: 0; font-weight: normal; }
-        .line .val { font-weight: bold; text-align: right; word-break: break-word; }
-        .amount-badge { background: #f8f9fa; border: 1px solid #eee; padding: 10px; text-align: center; margin: 12px 0; border-radius: 6px; }
-        .amount-badge .amt { font-size: 1.4rem; font-weight: bold; color: #111; }
-        .status-ok { text-align: center; font-size: .8rem; color: #2e7d32; font-weight: bold; letter-spacing: 1px; }
-        .receipt-footer { text-align: center; font-size: .7rem; color: #888; margin-top: 15px; }
-        .disclaimer { font-size: .62rem; color: #999; margin-top: 8px; }
-        .actions { width: 100%; max-width: 330px; margin-top: 15px; display: flex; gap: 10px; }
-        .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: .9rem; cursor: pointer; transition: .2s; text-align: center; }
-        .btn-whatsapp { background: #25D366; color: #fff; }
-        .btn-print { background: #333; color: #fff; }
-        .btn:hover { opacity: .9; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#072652">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Amana</title>
+<script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{color-scheme:light;--bg:#f1f4f9;--card:#fff;--tx:#0b2147;--mut:#586a88;--bd:#d6deea;--inp:#fff;--soft:#eaf0f9;--pri:#072652;--acc:#ff7d01}
+[data-theme=dark]{color-scheme:dark;--bg:#041532;--card:#0a2250;--tx:#ecf1fb;--mut:#9fb2d3;--bd:#1f3b70;--inp:#06193d;--soft:#102b5d;--pri:#17397a}
+*{box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);padding:16px}
+.top{max-width:900px;margin:0 auto 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font-size:1.15rem}.brand img{width:40px;height:40px;border-radius:10px}
+.tools{display:flex;gap:8px;align-items:center}
+.container{max-width:900px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.container{grid-template-columns:1fr}}
+.card{background:var(--card);padding:18px;border-radius:12px;border:1px solid var(--bd);box-shadow:0 4px 15px rgba(7,38,82,.06)}
+.hist{grid-column:1/-1}
+h2{font-size:1rem;margin:14px 0 10px;border-left:4px solid var(--acc);padding-left:8px}h2:first-child{margin-top:0}
+h3{font-size:.95rem;margin:14px 0 4px}
+.up{border:2px dashed var(--acc);background:var(--soft);padding:12px;text-align:center;border-radius:8px;margin-bottom:8px;cursor:pointer;font-weight:600;font-size:.85rem}
+.up input{display:none}
+#ocr{font-size:.75rem;color:var(--mut);margin-top:4px;font-weight:400}
+.fg{margin-bottom:10px}
+label{display:block;font-size:.8rem;font-weight:600;margin-bottom:4px;color:var(--mut)}
+input,select{width:100%;padding:9px;border:1px solid var(--bd);background:var(--inp);color:var(--tx);border-radius:6px;font-size:.92rem;outline:none}
+input:focus,select:focus{border-color:var(--acc)}
+.row{display:flex;gap:6px;margin-bottom:6px}.row .n{flex:1;min-width:0}.row .q{width:56px}.row .p{width:90px}
+.sm{border:1px solid var(--bd);background:var(--soft);color:var(--tx);border-radius:6px;padding:8px 10px;cursor:pointer;font-weight:600;font-size:.8rem}
+.rw{display:flex;flex-direction:column;align-items:center}
+.receipt{background:#fff;color:#0b2147;width:100%;max-width:330px;padding:18px;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.18);border-top:6px solid #072652}
+.receipt *{font-family:'Courier New',monospace}
+.c{text-align:center}
+#o-logo{max-width:90px;max-height:60px;margin-bottom:6px}
+.st{font-size:1.05rem;font-weight:bold;text-transform:uppercase}
+.sub{font-size:.72rem;color:#586a88}
+.dv{border-bottom:1px dashed #9aa8c0;margin:10px 0}
+.ln{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;margin-bottom:5px}
+.ln span:last-child{font-weight:bold;text-align:right;word-break:break-word}
+.tot{background:#f1f5fb;border:1px solid #dde5f1;border-left:4px solid #ff7d01;padding:8px;margin:10px 0;border-radius:6px;text-align:center}
+.tot small{display:block;font-size:.7rem;color:#586a88}.tot b{font-size:1.3rem;color:#072652}
+#o-status{text-align:center;font-size:.8rem;font-weight:bold;letter-spacing:1px}
+#qr{display:flex;justify-content:center;margin:10px 0 4px}
+.ft{text-align:center;font-size:.7rem;color:#586a88;margin-top:8px}.ft i{display:block;font-size:.6rem;color:#7b8aa6;margin-top:5px}
+.act{width:100%;max-width:330px;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{padding:11px;border:none;border-radius:6px;font-weight:bold;font-size:.85rem;cursor:pointer;color:#fff}
+.b1{background:var(--acc);color:#072652}.b2{background:#25D366}.b3{background:var(--pri)}.b4{background:var(--soft);color:var(--tx);border:1px solid var(--bd)}
+.hr{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--bd);font-size:.85rem;cursor:pointer}
+.hr:hover{background:var(--soft)}.hb{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{border:1px solid var(--bd);background:var(--soft);color:var(--tx);border-radius:20px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:.85rem}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+#info li{margin:0 0 8px 20px;font-size:.9rem;line-height:1.5}
+#info p{font-size:.88rem;line-height:1.55;margin-top:6px}
+#info details{border:1px solid var(--bd);border-radius:8px;padding:10px;margin-bottom:8px}
+#info summary{cursor:pointer;font-weight:600;font-size:.9rem}
+.warn{background:var(--soft);border-left:4px solid var(--acc);padding:10px;border-radius:6px;font-size:.85rem;margin-top:12px;line-height:1.5}
+.upd{color:var(--mut);font-size:.78rem!important;margin-top:14px!important}
+.foot{max-width:900px;margin:16px auto 0;text-align:center;font-size:.75rem;color:var(--mut)}
+</style>
+<script>try{var _t=JSON.parse(localStorage.getItem('theme'));document.documentElement.dataset.theme=_t||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch(e){}</script>
 </head>
 <body>
-
+<div class="top"><div class="brand"><img src="icon-192.png" alt=""><b>Amana</b></div>
+<div class="tools"><button class="sm" id="tb" onclick="toggleTheme()">🌙</button>
+<select id="lb" style="width:auto;font-weight:600" onchange="setLang(this.value)"><option value="fr">Français</option><option value="en">English</option><option value="pcm">Pidgin</option></select></div></div>
 <div class="container">
-    <div class="card">
-        <h2>Charger un Screenshot SMS (OCR)</h2>
-        <div class="upload-box" onclick="document.getElementById('screenshotInput').click()">
-            <span class="upload-label">📸 Prenez ou déposez une capture d'écran</span>
-            <input type="file" id="screenshotInput" accept="image/*" onchange="processScreenshot(event)">
-            <div id="ocr-status">Saisie manuelle possible ci-dessous</div>
-        </div>
+<div class="card">
+  <h2 data-i="ocrT"></h2>
+  <div class="up" onclick="$('shot').click()"><span data-i="ocrP"></span>
+    <input type="file" id="shot" accept="image/*" onchange="ocr(event)"><div id="ocr"></div></div>
 
-        <h2>Détails du Paiement</h2>
+  <h2 data-i="shop"></h2>
+  <div class="fg"><label data-i="store"></label><input id="store" oninput="update()"></div>
+  <div class="fg"><label data-i="city"></label><input id="city" oninput="update()"></div>
+  <div class="fg"><label data-i="tel"></label><input id="tel" type="tel" oninput="update()"></div>
+  <div class="fg"><label data-i="niu"></label><input id="niu" oninput="update()"></div>
+  <div class="fg"><label data-i="logo"></label><input type="file" id="logoIn" accept="image/*" onchange="logo(event)">
+    <button class="sm" style="margin-top:6px" onclick="rmLogo()" data-i="rmLogo"></button></div>
 
-        <div class="form-group"><label>Nom de la Boutique</label>
-            <input type="text" id="in-store" value="BOUTIQUE EXCELLENCE" oninput="updateReceipt()"></div>
-        <div class="form-group"><label>Ville / Adresse</label>
-            <input type="text" id="in-city" value="Yaoundé, Cameroun" oninput="updateReceipt()"></div>
-        <div class="form-group"><label>Opérateur</label>
-            <select id="in-op" onchange="updateReceipt()">
-                <option value="MTN Mobile Money">MTN Mobile Money</option>
-                <option value="Orange Money">Orange Money</option>
-            </select></div>
-        <div class="form-group"><label>Date et heure</label>
-            <input type="text" id="in-date" oninput="updateReceipt()"></div>
-        <div class="form-group"><label>ID de Transaction (TxID)</label>
-            <input type="text" id="in-txid" value="261013.1430.F9982" oninput="updateReceipt()"></div>
-        <div class="form-group"><label>Nom du Client</label>
-            <input type="text" id="in-client" value="Ahmadou Hayatou" oninput="updateReceipt()"></div>
-        <div class="form-group"><label>Montant (FCFA)</label>
-            <input type="number" id="in-amount" value="15000" min="0" oninput="updateReceipt()"></div>
-        <div class="form-group"><label>Article / Motif</label>
-            <input type="text" id="in-item" value="Achat de Marchandises" oninput="updateReceipt()"></div>
-    </div>
+  <h2 data-i="pay"></h2>
+  <div class="fg"><label data-i="method"></label><select id="method" onchange="update()">
+    <option value="mtn" data-i="mtn"></option><option value="om" data-i="om"></option>
+    <option value="cash" data-i="cash"></option><option value="bank" data-i="bank"></option><option value="card" data-i="card"></option></select></div>
+  <div class="fg"><label data-i="status"></label><select id="status" onchange="update()">
+    <option value="ok" data-i="sOk"></option><option value="pend" data-i="sPend"></option><option value="chk" data-i="sChk"></option></select></div>
+  <div class="fg"><label data-i="date"></label><input id="date" oninput="update()"></div>
+  <div class="fg"><label data-i="txid"></label><input id="txid" oninput="update()"></div>
+  <div class="fg"><label data-i="client"></label><input id="client" oninput="update()"></div>
 
-    <div class="receipt-wrapper">
-        <div class="receipt" id="receipt">
-            <div class="receipt-header">
-                <div class="store-title" id="out-store">BOUTIQUE EXCELLENCE</div>
-                <div class="store-sub" id="out-city">Yaoundé, Cameroun</div>
-            </div>
-            <div class="divider"></div>
-            <div class="line"><span class="label">Date :</span><span class="val" id="out-date">--/--/----</span></div>
-            <div class="line"><span class="label">Opérateur :</span><span class="val" id="out-op">MTN Mobile Money</span></div>
-            <div class="line"><span class="label">TxID :</span><span class="val" id="out-txid">261013.1430.F9982</span></div>
-            <div class="line"><span class="label">Client :</span><span class="val" id="out-client">Ahmadou Hayatou</span></div>
-            <div class="divider"></div>
-            <div class="line"><span class="label">Motif :</span><span class="val" id="out-item">Achat de Marchandises</span></div>
-            <div class="amount-badge"><div class="amt" id="out-amount">15 000 FCFA</div></div>
-            <div class="status-ok">✔ PAIEMENT CONFIRMÉ</div>
-            <div class="divider"></div>
-            <div class="receipt-footer">
-                Merci de votre confiance !<br>
-                Reçu généré par ImportCam Pay
-                <div class="disclaimer">Reçu établi par le commerçant, non officiel MTN / Orange.</div>
-            </div>
-        </div>
-
-        <div class="actions">
-            <button class="btn btn-whatsapp" onclick="shareWhatsApp()">WhatsApp</button>
-            <button class="btn btn-print" onclick="downloadImage()">Télécharger</button>
-        </div>
-    </div>
+  <h2 data-i="items"></h2>
+  <div id="items"></div>
+  <button class="sm" onclick="addRow()" data-i="add"></button>
 </div>
 
+<div class="rw">
+  <div class="receipt" id="receipt">
+    <div class="c"><img id="o-logo" alt="" hidden>
+      <div class="st" id="o-store"></div><div class="sub" id="o-city"></div><div class="sub" id="o-contact"></div></div>
+    <div class="dv"></div>
+    <div class="ln"><span data-i="rNo"></span><span id="o-num"></span></div>
+    <div class="ln"><span data-i="rDate"></span><span id="o-date"></span></div>
+    <div class="ln"><span data-i="rMeth"></span><span id="o-meth"></span></div>
+    <div class="ln" id="o-txrow"><span data-i="rTx"></span><span id="o-txid"></span></div>
+    <div class="ln"><span data-i="rCli"></span><span id="o-client"></span></div>
+    <div class="dv"></div>
+    <div id="o-items"></div>
+    <div class="tot"><small data-i="rTot"></small><b id="o-total"></b></div>
+    <div id="o-status"></div>
+    <div id="qr"></div>
+    <div class="ft"><span data-i="thanks"></span><br><span data-i="gen"></span><i data-i="disc"></i></div>
+  </div>
+  <div class="act">
+    <button class="btn b1" onclick="shareImg()" data-i="share"></button>
+    <button class="btn b2" onclick="waText()">WhatsApp</button>
+    <button class="btn b3" onclick="dlImg()" data-i="dl"></button>
+    <button class="btn b4" onclick="save()" data-i="save"></button>
+    <button class="btn b3" style="grid-column:1/-1" onclick="newR()" data-i="newR"></button>
+  </div>
+</div>
+
+<div class="card hist">
+  <h2 data-i="hist"></h2>
+  <div class="hb"><button class="sm" onclick="csv()" data-i="exp"></button><button class="sm" onclick="clr()" data-i="clr"></button></div>
+  <div id="hl"></div>
+</div>
+<div class="card hist"><div class="tabs" id="tabs"></div><div id="info"></div></div>
+</div>
+<div class="foot" data-i="foot"></div>
+
 <script>
-    const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
+const mk=(t,p)=>Object.assign(document.createElement(t),p);
+const ls=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
+const L={fr:{ocrT:'Charger un SMS (OCR)',ocrP:'📸 Prenez ou déposez une capture d\'écran',ocrI:'Saisie manuelle possible ci-dessous',ocrW:'⏳ Analyse en cours...',ocrO:'✅ Données extraites ! Vérifiez-les.',ocrE:'❌ Erreur de lecture.',shop:'Boutique',store:'Nom de la boutique',city:'Ville / Adresse',tel:'Téléphone',niu:'NIU / RCCM',logo:'Logo',rmLogo:'Retirer le logo',pay:'Paiement',method:'Mode de paiement',status:'Statut',date:'Date et heure',txid:'ID de transaction (TxID)',client:'Nom du client',items:'Articles',iname:'Article',iqty:'Qté',iprice:'Prix',add:'+ Ajouter un article',mtn:'MTN Mobile Money',om:'Orange Money',cash:'Espèces',bank:'Virement',card:'Carte',sOk:'PAIEMENT CONFIRMÉ',sPend:'EN ATTENTE',sChk:'À VÉRIFIER',rNo:'N° :',rDate:'Date :',rMeth:'Mode :',rTx:'TxID :',rCli:'Client :',rTot:'TOTAL',thanks:'Merci de votre confiance !',gen:'Reçu généré par Amana',disc:'Reçu établi par le commerçant, non officiel MTN / Orange.',share:'Partager l\'image',dl:'Télécharger',save:'Enregistrer',newR:'Nouveau reçu',hist:'Historique',exp:'Exporter CSV (Excel)',clr:'Tout effacer',empty:'Aucun reçu enregistré.',conf:'Effacer tout l\'historique ?',noShare:'Partage d\'image non supporté ici : l\'image a été téléchargée.',wa:'REÇU DE PAIEMENT',paid:'Paiement',csvH:['N°','Date','Boutique','Client','Mode','TxID','Statut','Articles','Total (FCFA)']},
+en:{ocrT:"Import an SMS screenshot (OCR)",ocrP:"📸 Capture or upload a screenshot",ocrI:"Manual entry is available below",ocrW:"⏳ Analysis in progress...",ocrO:"✅ Data extracted. Please verify it before use.",ocrE:"❌ The image could not be read.",shop:"Business details",store:"Business name",city:"City / Address",tel:"Telephone",niu:"Taxpayer ID / Trade register no.",logo:"Logo",rmLogo:"Remove logo",pay:"Payment details",method:"Payment method",status:"Payment status",date:"Date and time",txid:"Transaction identifier (TxID)",client:"Customer name",items:"Items purchased",iname:"Description",iqty:"Qty",iprice:"Unit price",add:"+ Add an item",mtn:"MTN Mobile Money",om:"Orange Money",cash:"Cash",bank:"Bank transfer",card:"Card",sOk:"PAYMENT CONFIRMED",sPend:"PAYMENT PENDING",sChk:"PENDING VERIFICATION",rNo:"No. :",rDate:"Date :",rMeth:"Method :",rTx:"TxID :",rCli:"Customer :",rTot:"TOTAL",thanks:"Thank you for your custom.",gen:"Receipt generated by Amana",disc:"Issued by the merchant; not an official MTN / Orange document.",share:"Share image",dl:"Download",save:"Save",newR:"New receipt",hist:"Receipt history",exp:"Export to CSV (Excel)",clr:"Delete all",empty:"No receipts have been saved.",conf:"Delete the entire history?",noShare:"Image sharing is not supported on this device; the image has been downloaded instead.",wa:"PAYMENT RECEIPT",paid:"Payment",csvH:["No.","Date","Business","Customer","Method","TxID","Status","Items","Total (FCFA)"]},
+pcm:{ocrT:"Put di SMS screenshot (OCR)",ocrP:"📸 Snap or drop screenshot",ocrI:"You fit write am by yourself for under",ocrW:"⏳ Di machine di read am...",ocrO:"✅ We don get di info! Check am well.",ocrE:"❌ We no fit read dis picture.",shop:"Di shop",store:"Name for di shop",city:"Town / Address",tel:"Phone number",niu:"NIU / RCCM",logo:"Logo",rmLogo:"Comot di logo",pay:"Di payment",method:"How e pay",status:"Payment status",date:"Date and time",txid:"Transaction ID (TxID)",client:"Name of di customer",items:"Di things wey e buy",iname:"Di thing",iqty:"How many",iprice:"Price",add:"+ Add anoda thing",mtn:"MTN Mobile Money",om:"Orange Money",cash:"Cash",bank:"Bank transfer",card:"Card",sOk:"MONEY DON ENTER",sPend:"WE DI WAIT",sChk:"WE GO CHECK AM",rNo:"Number :",rDate:"Date :",rMeth:"How e pay :",rTx:"TxID :",rCli:"Customer :",rTot:"TOTAL",thanks:"Tank you plenty for your trust!",gen:"Dis receipt na Amana make am",disc:"Na di seller write dis receipt, e no be official MTN / Orange paper.",share:"Send di picture",dl:"Download",save:"Keep am",newR:"New receipt",hist:"Di receipts wey you don make",exp:"Export CSV (Excel)",clr:"Clear everything",empty:"You no get any receipt yet.",conf:"You wan clear all di history?",noShare:"Dis phone no fit share picture, so we don download am.",wa:"RECEIPT FOR PAYMENT",paid:"Payment",csvH:["Number","Date","Shop","Customer","How e pay","TxID","Status","Things","Total (FCFA)"]}};
+Object.assign(L.fr,{tUsage:"Note d’utilisation",tFaq:"FAQ",tCgu:"CGU",foot:"© 2026 Amana",tTheme:"Changer de thème",upd:"Dernière mise à jour : 22 octobre 2026"});
+Object.assign(L.en,{tUsage:"User guide",tFaq:"FAQ",tCgu:"Terms of use",foot:"© 2026 Amana",tTheme:"Switch theme",upd:"Last updated: 22 October 2026"});
+Object.assign(L.pcm,{tUsage:"How to use am",tFaq:"FAQ",tCgu:"Rules (CGU)",foot:"© 2026 Amana",tTheme:"Change theme",upd:"Last update: 22 October 2026"});
+const INFO={
+fr:{steps:["Renseignez votre boutique (nom, ville, téléphone, NIU/RCCM, logo). Ces informations sont mémorisées sur votre appareil.","Saisissez le paiement : mode, date, client et TxID. Vous pouvez aussi importer une capture d’écran du SMS : l’OCR remplit les champs pour vous.","Ajoutez les articles (description, quantité, prix). Le total est calculé automatiquement.","Choisissez le statut du paiement, puis vérifiez l’aperçu du reçu.","Partagez l’image (WhatsApp, etc.), téléchargez-la ou enregistrez le reçu dans l’historique. Utilisez « Nouveau reçu » pour passer au suivant."],
+warn:"Avant de confirmer un paiement, vérifiez-le toujours dans votre application MTN MoMo / Orange Money ou sur votre relevé. L’application ne vérifie aucun paiement.",
+faq:[["L’application vérifie-t-elle que le paiement a bien été reçu ?","Non. Elle met en forme les informations que vous saisissez. Contrôlez toujours le paiement dans votre application MoMo / OM avant de remettre un reçu."],["Le reçu est-il un document officiel ?","Non. Il est établi par le commerçant et n’a aucune valeur officielle MTN ou Orange. Il ne remplace pas une facture normalisée."],["Où sont enregistrés mes reçus ?","Uniquement dans le navigateur de votre appareil ; rien n’est envoyé sur un serveur. Si vous videz les données du navigateur, l’historique est perdu : exportez régulièrement le CSV."],["La lecture de la capture d’écran est fausse, que faire ?","L’OCR peut se tromper sur les chiffres. Relisez et corrigez chaque champ, ou saisissez tout à la main."],["Puis-je installer l’application sur mon téléphone ?","Oui. Dans le menu de votre navigateur, choisissez « Ajouter à l’écran d’accueil » ou « Installer l’application »."],["Fonctionne-t-elle sans connexion ?","Après un premier chargement en ligne, la saisie et la création de reçus fonctionnent hors ligne. L’OCR nécessite une connexion."]],
+cgu:[["Objet","Amana est un outil gratuit permettant aux commerçants de créer des reçus de paiement. L’utilisation de l’application vaut acceptation des présentes conditions."],["Nature du service","L’application n’est ni un service de paiement ni un établissement financier. Elle n’est affiliée ni à MTN ni à Orange, et ne vérifie, n’exécute ni ne garantit aucune transaction."],["Utilisation autorisée","L’utilisateur s’engage à n’émettre des reçus que pour des paiements réellement reçus et à saisir des informations exactes. Il est interdit d’utiliser l’application pour falsifier une preuve de paiement, tromper un tiers ou commettre une fraude."],["Responsabilité de l’utilisateur","L’utilisateur est seul responsable du contenu des reçus qu’il établit et de leur usage, ainsi que du respect de ses obligations fiscales et comptables."],["Données personnelles","Les informations saisies (boutique, clients, reçus) sont stockées uniquement dans le navigateur de l’utilisateur. L’analyse OCR des images est effectuée sur l’appareil. L’application charge des bibliothèques depuis des réseaux de diffusion (CDN) tiers."],["Limitation de responsabilité","L’application est fournie « en l’état », sans garantie d’exactitude ni de disponibilité. L’éditeur ne peut être tenu responsable des pertes de données, des erreurs de lecture OCR ou des litiges liés aux reçus émis."],["Modification et droit applicable","Ces conditions peuvent être modifiées à tout moment. Elles sont régies par le droit camerounais."]]},
+en:{steps:["Enter your business details (name, city, telephone, tax/trade register number, logo). They are saved on your device.","Record the payment: method, date, customer and TxID. Alternatively, upload an SMS screenshot and the OCR will populate the fields.","Add the items purchased (description, quantity, unit price). The total is computed automatically.","Select the payment status and review the receipt preview.","Share the image (e.g., via WhatsApp), download it, or save the receipt to the history. Select “New receipt” to proceed to the next one."],
+warn:"Before confirming a payment, always verify it in your MTN MoMo / Orange Money application or statement. This application does not verify any payment.",
+faq:[["Does the application verify that a payment has been received?","No. It only formats the information that you enter. Always check the payment in your MoMo / OM application before issuing a receipt."],["Is the receipt an official document?","No. It is issued by the merchant and has no official MTN or Orange standing. It does not replace a standardised invoice."],["Where are my receipts stored?","Exclusively in your device’s browser; nothing is sent to a server. Clearing the browser data erases the history, so export the CSV file regularly."],["The screenshot was read incorrectly. What should I do?","OCR may misread digits. Review and correct each field, or enter everything manually."],["Can I install the application on my phone?","Yes. In your browser menu, select “Add to Home screen” or “Install app”."],["Does it work offline?","After a first online load, data entry and receipt creation are available offline. The OCR feature requires an internet connection."]],
+cgu:[["Purpose","Amana is a free tool enabling merchants to produce payment receipts. Use of the application constitutes acceptance of these terms."],["Nature of the service","The application is neither a payment service nor a financial institution. It is not affiliated with MTN or Orange, and it neither verifies, executes nor guarantees any transaction."],["Permitted use","Users undertake to issue receipts only for payments actually received and to enter accurate information. Using the application to forge proof of payment, to deceive a third party, or to commit fraud is strictly prohibited."],["User responsibility","The user is solely responsible for the content of the receipts issued and for their use, as well as for compliance with applicable tax and accounting obligations."],["Personal data","Information entered (business, customers, receipts) is stored solely in the user’s browser. OCR analysis of images is performed on the device. The application loads libraries from third-party content delivery networks (CDNs)."],["Limitation of liability","The application is provided “as is”, without any warranty of accuracy or availability. The publisher cannot be held liable for data loss, OCR reading errors, or disputes arising from receipts issued."],["Amendments and governing law","These terms may be amended at any time and are governed by the laws of Cameroon."]]},
+pcm:{steps:["Write di info for your shop (name, town, phone, NIU/RCCM, logo). Di app go keep am for your phone.","Write di payment: how e pay, date, customer and TxID. You fit also put screenshot of di SMS and di app go fill di boxes for you.","Add di things wey customer buy (name, how many, price). Di app go add di total by itself.","Choose di payment status, den look di receipt well.","Send di picture (WhatsApp and so on), download am or keep am for history. Press “New receipt” when you wan make anoda one."],
+warn:"Before you talk say di money don enter, check am first for your MTN MoMo / Orange Money app. Dis app no di check any payment.",
+faq:[["Di app di check say di money don really enter?","No. Di app only arrange di info wey you write. Always check di money for your MoMo / OM app before you give receipt."],["Dis receipt na official paper?","No. Na di seller make am, e no get official value from MTN or Orange. E no fit replace proper invoice."],["Where my receipts di stay?","Only for di browser for your phone. We no send anything go any server. If you clear di browser data, di history go loss, so export di CSV always."],["Di app read di screenshot wrong. Wetin I go do?","Di OCR fit mistake di numbers. Check every box and correct am, or write everything by hand."],["I fit put di app for my phone?","Yes. For your browser menu, press “Add to Home screen” or “Install app”."],["E di work without network?","After you don open am one time with network, you fit write and make receipt without network. Di OCR need network."]],
+cgu:[["Wetin dis app be","Amana na free tool wey help sellers make payment receipts. If you use di app, e mean say you agree with dis rules."],["Wetin di app no be","Di app no be payment service and e no be bank. E no get link with MTN or Orange, and e no di check, no di do and no di guarantee any transaction."],["How you must use am","You must make receipt only for money wey don really enter and write true information. Na serious offence to use di app make fake proof of payment, deceive somebody or do fraud."],["Your own responsibility","Na you alone carry di responsibility for di receipts wey you make and how you use dem, and for your tax and accounting duty."],["Your information","Di info wey you write (shop, customers, receipts) stay only for your browser. Di OCR di read di image for your phone. Di app di load some libraries from third-party CDN networks."],["Where we no carry blame","Di app dey “as e dey”, no guarantee say e correct or e go always dey. Di owner no go carry blame for lost data, OCR mistakes or quarrel wey come from receipts you make."],["Changes and law","We fit change dis rules any time. Cameroon law dey rule dem."]]}};
+let tab='usage';
+function info(){const D=INFO[lang],tb=$('tabs'),b=$('info');tb.innerHTML='';b.innerHTML='';
+  [['usage','tUsage'],['faq','tFaq'],['cgu','tCgu']].forEach(([k,l])=>tb.append(mk('button',{className:'tab'+(tab===k?' on':''),textContent:t(l),onclick:()=>{tab=k;info()}})));
+  if(tab==='usage'){const o=mk('ol');D.steps.forEach(x=>o.append(mk('li',{textContent:x})));b.append(o,mk('div',{className:'warn',textContent:'⚠ '+D.warn}))}
+  else if(tab==='faq')D.faq.forEach(([q,a])=>{const d=mk('details');d.append(mk('summary',{textContent:q}),mk('p',{textContent:a}));b.append(d)});
+  else{D.cgu.forEach(([h,x],i)=>b.append(mk('h3',{textContent:`${i+1}. ${h}`}),mk('p',{textContent:x})));b.append(mk('p',{className:'upd',textContent:t('upd')}))}}
+let lang=L[ls('lang')]?ls('lang'):'fr',items=[{n:'',q:1,p:0}],curN=ls('next')||1,logoData=null;
+const t=k=>L[lang][k]||k;
+const fmt=n=>new Intl.NumberFormat('fr-FR').format(n)+' FCFA';
+const total=()=>items.reduce((s,i)=>s+(+i.q||0)*(+i.p||0),0);
+const num=()=>'REC-'+String(curN).padStart(4,'0');
+const stKey=s=>'s'+s[0].toUpperCase()+s.slice(1);
+const COL={ok:'#2e7d32',pend:'#e65100',chk:'#c62828'},ICO={ok:'✔ ',pend:'⏳ ',chk:'⚠ '};
 
-    function setTodayDate() {
-        const now = new Date();
-        $('in-date').value = now.toLocaleDateString('fr-FR') + ' ' +
-            now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    }
+function nowStr(){const d=new Date();return d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+function setLang(v){lang=v;ls('lang',lang);applyLang()}
+function applyLang(){document.documentElement.lang=lang;$('lb').value=lang;$('tb').title=t('tTheme');
+  document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));
+  $('ocr').textContent=t('ocrI');rows();hist();info();update()}
 
-    function updateReceipt() {
-        $('out-store').innerText = $('in-store').value || 'MA BOUTIQUE';
-        $('out-city').innerText = $('in-city').value || 'Cameroun';
-        $('out-date').innerText = $('in-date').value || '-';
-        $('out-op').innerText = $('in-op').value;
-        $('out-txid').innerText = $('in-txid').value || '-';
-        $('out-client').innerText = $('in-client').value || '-';
-        $('out-item').innerText = $('in-item').value || '-';
+/* Articles */
+function rows(){const b=$('items');b.innerHTML='';items.forEach((it,i)=>{
+  const r=mk('div',{className:'row'});
+  r.append(mk('input',{className:'n',placeholder:t('iname'),value:it.n,oninput:e=>{it.n=e.target.value;update()}}),
+    mk('input',{className:'q',type:'number',min:0,placeholder:t('iqty'),value:it.q,oninput:e=>{it.q=e.target.value;update()}}),
+    mk('input',{className:'p',type:'number',min:0,placeholder:t('iprice'),value:it.p||'',oninput:e=>{it.p=e.target.value;update()}}),
+    mk('button',{className:'sm',textContent:'✕',onclick:()=>{items.length>1?items.splice(i,1):items[0]={n:'',q:1,p:0};rows();update()}}));
+  b.append(r)})}
+function addRow(){items.push({n:'',q:1,p:0});rows()}
 
-        $('receipt').style.borderTopColor = ($('in-op').value === 'Orange Money') ? '#ff6600' : '#ffcc00';
+/* Aperçu */
+function update(){
+  $('o-store').textContent=$('store').value||'MA BOUTIQUE';
+  $('o-city').textContent=$('city').value;
+  $('o-contact').textContent=[$('tel').value,$('niu').value].filter(Boolean).join(' · ');
+  $('o-num').textContent=num();$('o-date').textContent=$('date').value||'-';
+  const m=$('method').value;$('o-meth').textContent=t(m);
+  $('o-txid').textContent=$('txid').value;$('o-txrow').hidden=!$('txid').value;
+  $('o-client').textContent=$('client').value||'-';
+  const box=$('o-items');box.innerHTML='';
+  items.forEach(i=>{if(!i.n&&!+i.p)return;const l=mk('div',{className:'ln'});
+    l.append(mk('span',{textContent:`${i.q||1} x ${i.n||t('paid')}`}),mk('span',{textContent:fmt((+i.q||0)*(+i.p||0))}));box.append(l)});
+  $('o-total').textContent=fmt(total());
+  const s=$('status').value,st=$('o-status');st.textContent=ICO[s]+t(stKey(s));st.style.color=COL[s];
+  const lg=$('o-logo');lg.hidden=!logoData;if(logoData)lg.src=logoData;
+  const q=$('qr');q.innerHTML='';try{new QRCode(q,{text:[num(),$('txid').value,total(),$('store').value].join('|'),width:72,height:72})}catch(e){}
+  ls('shop',{store:$('store').value,city:$('city').value,tel:$('tel').value,niu:$('niu').value,logo:logoData,method:m})}
 
-        const rawAmt = Number($('in-amount').value) || 0;
-        $('out-amount').innerText = new Intl.NumberFormat('fr-FR').format(rawAmt) + ' FCFA';
-    }
+/* Logo */
+function logo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{
+  const k=Math.min(1,160/Math.max(img.width,img.height)),c=mk('canvas',{width:img.width*k,height:img.height*k});
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);logoData=c.toDataURL('image/png');update()};img.src=URL.createObjectURL(f)}
+function rmLogo(){logoData=null;$('logoIn').value='';update()}
 
-    /* --- OCR (Tesseract.js) --- */
-    async function processScreenshot(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+/* Historique */
+function cur(){return{n:curN,date:$('date').value,store:$('store').value,client:$('client').value,method:$('method').value,status:$('status').value,txid:$('txid').value,items:JSON.parse(JSON.stringify(items)),total:total()}}
+function save(){const h=ls('hist')||[],r=cur(),i=h.findIndex(x=>x.n===r.n);
+  i>=0?h[i]=r:h.unshift(r);ls('hist',h);if(curN>=(ls('next')||1))ls('next',curN+1);hist()}
+function hist(){const h=ls('hist')||[],b=$('hl');b.innerHTML='';
+  if(!h.length){b.textContent=t('empty');return}
+  h.forEach(r=>{const d=mk('div',{className:'hr',onclick:()=>load(r)});
+    d.append(mk('span',{textContent:`REC-${String(r.n).padStart(4,'0')} · ${r.date} · ${r.client||'-'} · ${fmt(r.total)}`}),
+      mk('button',{className:'sm',textContent:'✕',onclick:e=>{e.stopPropagation();ls('hist',h.filter(x=>x.n!==r.n));hist()}}));b.append(d)})}
+function load(r){curN=r.n;['client','method','status','date','txid'].forEach(k=>$(k).value=r[k]);items=JSON.parse(JSON.stringify(r.items));rows();update();scrollTo(0,0)}
+function newR(){if(total()>0)save();const nx=Math.max(ls('next')||1,curN+1);ls('next',nx);curN=nx;
+  ['client','txid'].forEach(k=>$(k).value='');$('date').value=nowStr();$('status').value='ok';items=[{n:'',q:1,p:0}];rows();update()}
+function clr(){if(confirm(t('conf'))){ls('hist',[]);hist()}}
+function csv(){const h=ls('hist')||[],q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const lines=[L[lang].csvH.map(q).join(';')];
+  h.forEach(r=>lines.push([`REC-${String(r.n).padStart(4,'0')}`,r.date,r.store,r.client,t(r.method),r.txid,t(stKey(r.status)),r.items.map(i=>`${i.q}x ${i.n}`).join(' + '),r.total].map(q).join(';')));
+  down(new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),'recus.csv')}
+function down(blob,name){const a=mk('a',{href:URL.createObjectURL(blob),download:name});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
 
-        const statusEl = $('ocr-status');
-        statusEl.style.color = '#007bff';
-        statusEl.innerText = '⏳ Analyse du SMS en cours...';
+/* Image : partage / téléchargement */
+const snap=()=>html2canvas($('receipt'),{scale:2,backgroundColor:'#fff'}).then(c=>new Promise(r=>c.toBlob(r,'image/png')));
+async function dlImg(){save();down(await snap(),num()+'.png')}
+async function shareImg(){save();const b=await snap(),f=new File([b],num()+'.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:num()})}catch(e){}}
+  else{down(b,num()+'.png');alert(t('noShare'))}}
+function waText(){save();const l=items.filter(i=>i.n||+i.p).map(i=>`• ${i.q||1} x ${i.n||t('paid')} : ${fmt((+i.q||0)*(+i.p||0))}`).join('\n');
+  const m=`*--- ${t('wa')} - ${$('store').value} ---*\n${num()} | ${$('date').value}\n👤 *${t('rCli')}* ${$('client').value}\n${l}\n💰 *${t('rTot')} :* ${fmt(total())}\n🔢 *${t('rTx')}* ${$('txid').value}\n*${$('o-status').textContent}*`;
+  window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
 
-        try {
-            const result = await Tesseract.recognize(file, 'fra+eng');
-            parseSmsText(result.data.text);
-            statusEl.style.color = 'green';
-            statusEl.innerText = '✅ Données extraites ! Vérifiez-les avant de partager.';
-        } catch (err) {
-            console.error(err);
-            statusEl.style.color = 'red';
-            statusEl.innerText = '❌ Erreur de lecture. Saisissez manuellement.';
-        }
-        event.target.value = '';
-    }
+/* OCR */
+async function ocr(e){const f=e.target.files[0];if(!f)return;const s=$('ocr');s.textContent=t('ocrW');
+  try{const r=await Tesseract.recognize(f,'fra+eng');parse(r.data.text);s.textContent=t('ocrO')}catch(x){console.error(x);s.textContent=t('ocrE')}
+  e.target.value=''}
+function parse(x){
+  if(/orange/i.test(x))$('method').value='om';else if(/momo|mtn/i.test(x))$('method').value='mtn';
+  const a=x.match(/(?:montant|pay[ée]|re[çc]u|envoy[ée]|transf[ée]r[ée])\D{0,25}(\d[\d\s.,]*)\s*(?:FCFA|XAF|F\b)/i)||x.match(/(\d[\d\s.,]*)\s*(?:FCFA|XAF)/i);
+  if(a){const c=a[1].trim().replace(/[.,]\d{1,2}$/,'').replace(/\D/g,'');if(c&&items.length===1&&!+items[0].p){items[0].p=c;items[0].q=1;rows()}}
+  const tx=x.match(/(?:Trans(?:action)?\s*(?:ID|Id)?|TxId|ID)\s*[:.]?\s*([A-Za-z0-9.]{6,})/i);if(tx)$('txid').value=tx[1];
+  const c=x.match(/(?:de la part de|de|par)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){1,3})/);if(c)$('client').value=c[1].trim();
+  update()}
 
-    function parseSmsText(text) {
-        if (/orange/i.test(text)) $('in-op').value = 'Orange Money';
-        else if (/momo|mtn/i.test(text)) $('in-op').value = 'MTN Mobile Money';
+/* Thème */
+let theme=ls('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+function applyTheme(){document.documentElement.dataset.theme=theme;$('tb').textContent=theme==='dark'?'☀️':'🌙';document.querySelector('meta[name=theme-color]').content=theme==='dark'?'#041532':'#072652'}
+function toggleTheme(){theme=theme==='dark'?'light':'dark';ls('theme',theme);applyTheme()}
 
-        // Montant : on privilégie un mot-clé (payé, reçu, montant...), sinon le premier montant en FCFA
-        const amountMatch =
-            text.match(/(?:montant|pay[ée]|re[çc]u|envoy[ée]|transf[ée]r[ée])\D{0,25}(\d[\d\s.,]*)\s*(?:FCFA|XAF|F\b)/i) ||
-            text.match(/(\d[\d\s.,]*)\s*(?:FCFA|XAF)/i);
-        if (amountMatch) {
-            const clean = amountMatch[1].trim().replace(/[.,]\d{1,2}$/, '').replace(/\D/g, '');
-            if (clean) $('in-amount').value = clean;
-        }
-
-        // TxID
-        const txidMatch = text.match(/(?:Trans(?:action)?\s*(?:ID|Id)?|TxId|ID)\s*[:.]?\s*([A-Za-z0-9.]{6,})/i);
-        if (txidMatch) $('in-txid').value = txidMatch[1];
-
-        // Nom du client
-        const clientMatch = text.match(/(?:de la part de|de|par)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){1,3})/);
-        if (clientMatch) $('in-client').value = clientMatch[1].trim();
-
-        updateReceipt();
-    }
-
-    function downloadImage() {
-        html2canvas($('receipt'), { scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            const safeId = ($('in-txid').value || 'recu').replace(/[^\w.-]/g, '_');
-            link.download = `Recu_${safeId}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        });
-    }
-
-    function shareWhatsApp() {
-        const text =
-            `*--- REÇU DE PAIEMENT - ${$('in-store').value} ---*\n` +
-            `👤 *Client :* ${$('in-client').value}\n` +
-            `🛍️ *Motif :* ${$('in-item').value}\n` +
-            `💰 *Montant :* ${$('out-amount').innerText}\n` +
-            `🔢 *TxID :* ${$('in-txid').value}\n` +
-            `✅ *Statut :* Paiement Confirmé\n\n` +
-            `_Merci pour votre achat !_`;
-        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-    }
-
-    setTodayDate();
-    updateReceipt();
+/* Init */
+const sh=ls('shop')||{};
+$('store').value=sh.store||'';$('city').value=sh.city||'';$('tel').value=sh.tel||'';$('niu').value=sh.niu||'';
+if(sh.method)$('method').value=sh.method;logoData=sh.logo||null;$('date').value=nowStr();
+applyTheme();applyLang();
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
-
 </body>
 </html>
