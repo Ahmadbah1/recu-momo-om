@@ -11,6 +11,7 @@
 <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{color-scheme:light;--bg:#f1f4f9;--card:#fff;--tx:#0b2147;--mut:#586a88;--bd:#d6deea;--inp:#fff;--soft:#eaf0f9;--pri:#072652;--acc:#ff7d01}
 [data-theme=dark]{color-scheme:dark;--bg:#041532;--card:#0a2250;--tx:#ecf1fb;--mut:#9fb2d3;--bd:#1f3b70;--inp:#06193d;--soft:#102b5d;--pri:#17397a}
@@ -30,8 +31,8 @@ h3{font-size:.95rem;margin:14px 0 4px}
 #ocr{font-size:.75rem;color:var(--mut);margin-top:4px;font-weight:400}
 .fg{margin-bottom:10px}
 label{display:block;font-size:.8rem;font-weight:600;margin-bottom:4px;color:var(--mut)}
-input,select{width:100%;padding:9px;border:1px solid var(--bd);background:var(--inp);color:var(--tx);border-radius:6px;font-size:.92rem;outline:none}
-input:focus,select:focus{border-color:var(--acc)}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--bd);background:var(--inp);color:var(--tx);border-radius:6px;font-size:.92rem;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 .row{display:flex;gap:6px;margin-bottom:6px}.row .n{flex:1;min-width:0}.row .q{width:56px}.row .p{width:90px}
 .sm{border:1px solid var(--bd);background:var(--soft);color:var(--tx);border-radius:6px;padding:8px 10px;cursor:pointer;font-weight:600;font-size:.8rem}
 .rw{display:flex;flex-direction:column;align-items:center}
@@ -64,6 +65,9 @@ input:focus,select:focus{border-color:var(--acc)}
 .warn{background:var(--soft);border-left:4px solid var(--acc);padding:10px;border-radius:6px;font-size:.85rem;margin-top:12px;line-height:1.5}
 .upd{color:var(--mut);font-size:.78rem!important;margin-top:14px!important}
 .foot{max-width:900px;margin:16px auto 0;text-align:center;font-size:.75rem;color:var(--mut)}
+textarea{resize:vertical;font-size:.88rem}
+pre{white-space:pre-wrap;font-size:.75rem;color:var(--mut);margin-top:6px}
+#o-msg{margin-bottom:4px}
 </style>
 <script>try{var _t=JSON.parse(localStorage.getItem('theme'));document.documentElement.dataset.theme=_t||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch(e){}</script>
 </head>
@@ -76,14 +80,21 @@ input:focus,select:focus{border-color:var(--acc)}
   <h2 data-i="ocrT"></h2>
   <div class="up" onclick="$('shot').click()"><span data-i="ocrP"></span>
     <input type="file" id="shot" accept="image/*" onchange="ocr(event)"><div id="ocr"></div></div>
+  <details id="ocrTxt" hidden style="margin-bottom:10px"><summary class="sub" style="cursor:pointer" data-i="ocrText"></summary><pre id="ocrOut"></pre></details>
+  <div class="fg"><label data-i="paste"></label><textarea id="smsTxt" rows="3"></textarea>
+    <button class="sm" style="margin-top:6px" onclick="readTxt()" data-i="pasteBtn"></button></div>
 
   <h2 data-i="shop"></h2>
+  <div class="fg"><label data-i="coSel"></label><select id="prof" onchange="setProf(this.value)"></select>
+    <div class="hb" style="margin:6px 0 0"><button class="sm" onclick="addProf()" data-i="newCo"></button><button class="sm" onclick="delProf()" data-i="delCo"></button></div></div>
   <div class="fg"><label data-i="store"></label><input id="store" oninput="update()"></div>
   <div class="fg"><label data-i="city"></label><input id="city" oninput="update()"></div>
   <div class="fg"><label data-i="tel"></label><input id="tel" type="tel" oninput="update()"></div>
   <div class="fg"><label data-i="niu"></label><input id="niu" oninput="update()"></div>
   <div class="fg"><label data-i="logo"></label><input type="file" id="logoIn" accept="image/*" onchange="logo(event)">
     <button class="sm" style="margin-top:6px" onclick="rmLogo()" data-i="rmLogo"></button></div>
+
+  <div class="fg"><label data-i="msg"></label><input id="msg" oninput="update()"></div>
 
   <h2 data-i="pay"></h2>
   <div class="fg"><label data-i="method"></label><select id="method" onchange="update()">
@@ -115,20 +126,21 @@ input:focus,select:focus{border-color:var(--acc)}
     <div class="tot"><small data-i="rTot"></small><b id="o-total"></b></div>
     <div id="o-status"></div>
     <div id="qr"></div>
-    <div class="ft"><span data-i="thanks"></span><br><span data-i="gen"></span><i data-i="disc"></i></div>
+    <div class="ft"><div id="o-msg"></div><i data-i="disc"></i></div>
   </div>
   <div class="act">
     <button class="btn b1" onclick="shareImg()" data-i="share"></button>
     <button class="btn b2" onclick="waText()">WhatsApp</button>
     <button class="btn b3" onclick="dlImg()" data-i="dl"></button>
+    <button class="btn b3" onclick="dlPdf()" data-i="pdf"></button>
     <button class="btn b4" onclick="save()" data-i="save"></button>
-    <button class="btn b3" style="grid-column:1/-1" onclick="newR()" data-i="newR"></button>
+    <button class="btn b4" onclick="newR()" data-i="newR"></button>
   </div>
 </div>
 
 <div class="card hist">
   <h2 data-i="hist"></h2>
-  <div class="hb"><button class="sm" onclick="csv()" data-i="exp"></button><button class="sm" onclick="clr()" data-i="clr"></button></div>
+  <div class="hb"><button class="sm" onclick="xlsx()" data-i="expX"></button><button class="sm" onclick="csv()" data-i="exp"></button><button class="sm" onclick="clr()" data-i="clr"></button></div>
   <div id="hl"></div>
 </div>
 <div class="card hist"><div class="tabs" id="tabs"></div><div id="info"></div></div>
@@ -145,18 +157,24 @@ pcm:{ocrT:"Put di SMS screenshot (OCR)",ocrP:"📸 Snap or drop screenshot",ocrI
 Object.assign(L.fr,{tUsage:"Note d’utilisation",tFaq:"FAQ",tCgu:"CGU",foot:"© 2026 Amana",tTheme:"Changer de thème",upd:"Dernière mise à jour : 22 octobre 2026"});
 Object.assign(L.en,{tUsage:"User guide",tFaq:"FAQ",tCgu:"Terms of use",foot:"© 2026 Amana",tTheme:"Switch theme",upd:"Last updated: 22 October 2026"});
 Object.assign(L.pcm,{tUsage:"How to use am",tFaq:"FAQ",tCgu:"Rules (CGU)",foot:"© 2026 Amana",tTheme:"Change theme",upd:"Last update: 22 October 2026"});
+Object.assign(L.fr,{ocrT:"Remplir avec une photo du SMS de dépôt",ocrP:"📸 Prenez ou choisissez la photo du SMS",ocrI:"Ou remplissez à la main plus bas",ocrW:"⏳ Lecture de la photo…",ocrO:"✅ {n} information(s) trouvée(s). Vérifiez-les.",ocrNone:"⚠ Rien reconnu. Prenez la photo bien droite et de près, ou collez le texte du SMS ci-dessous.",ocrE:"❌ Impossible de lire la photo. Essayez avec une autre.",ocrText:"Voir le texte lu",paste:"Ou collez le texte du SMS ici",pasteBtn:"Lire ce texte",coSel:"Entreprise",company:"Entreprise",newCo:"+ Nouvelle entreprise",delCo:"Supprimer",confP:"Supprimer cette entreprise et ses informations ?",msg:"Message de fin de reçu (facultatif)",pdf:"Télécharger PDF",disc:"Document établi par le commerçant"});
+Object.assign(L.en,{ocrT:"Complete using a photograph of the deposit SMS",ocrP:"📸 Take or select a photograph of the SMS",ocrI:"Alternatively, complete the form manually below",ocrW:"⏳ Reading the photograph…",ocrO:"✅ {n} item(s) identified. Please verify them.",ocrNone:"⚠ Nothing could be recognised. Retake the photograph straight-on and closer, or paste the SMS text below.",ocrE:"❌ The photograph could not be read. Please try another one.",ocrText:"View recognised text",paste:"Or paste the SMS text here",pasteBtn:"Read this text",coSel:"Business",company:"Business",newCo:"+ New business",delCo:"Delete",confP:"Delete this business and its details?",msg:"Closing message on receipt (optional)",pdf:"Download PDF",disc:"Document issued by the merchant"});
+Object.assign(L.pcm,{ocrT:"Fill am with photo of di deposit SMS",ocrP:"📸 Snap or choose di SMS photo",ocrI:"Or you fit write am by hand for under",ocrW:"⏳ Di read di photo…",ocrO:"✅ We don find {n} thing. Check dem well.",ocrNone:"⚠ We no recognise anything. Snap di photo straight and near, or paste di SMS text for under.",ocrE:"❌ We no fit read di photo. Try anoda one.",ocrText:"See di text wey we read",paste:"Or paste di SMS text here",pasteBtn:"Read dis text",coSel:"Di shop",company:"Shop",newCo:"+ New shop",delCo:"Delete",confP:"Delete dis shop and all im info?",msg:"Message for di end of receipt (no be must)",pdf:"Download PDF",disc:"Na di seller make dis paper"});
+Object.assign(L.fr,{expX:"Exporter Excel (.xlsx)",exp:"Exporter CSV",xlErr:"Impossible de charger le module Excel. Vérifiez votre connexion."});
+Object.assign(L.en,{expX:"Export to Excel (.xlsx)",exp:"Export CSV",xlErr:"The Excel module could not be loaded. Please check your connection."});
+Object.assign(L.pcm,{expX:"Export Excel (.xlsx)",exp:"Export CSV",xlErr:"We no fit load di Excel module. Check your network."});
 const INFO={
 fr:{steps:["Renseignez votre boutique (nom, ville, téléphone, NIU/RCCM, logo). Ces informations sont mémorisées sur votre appareil.","Saisissez le paiement : mode, date, client et TxID. Vous pouvez aussi importer une capture d’écran du SMS : l’OCR remplit les champs pour vous.","Ajoutez les articles (description, quantité, prix). Le total est calculé automatiquement.","Choisissez le statut du paiement, puis vérifiez l’aperçu du reçu.","Partagez l’image (WhatsApp, etc.), téléchargez-la ou enregistrez le reçu dans l’historique. Utilisez « Nouveau reçu » pour passer au suivant."],
 warn:"Avant de confirmer un paiement, vérifiez-le toujours dans votre application MTN MoMo / Orange Money ou sur votre relevé. L’application ne vérifie aucun paiement.",
-faq:[["L’application vérifie-t-elle que le paiement a bien été reçu ?","Non. Elle met en forme les informations que vous saisissez. Contrôlez toujours le paiement dans votre application MoMo / OM avant de remettre un reçu."],["Le reçu est-il un document officiel ?","Non. Il est établi par le commerçant et n’a aucune valeur officielle MTN ou Orange. Il ne remplace pas une facture normalisée."],["Où sont enregistrés mes reçus ?","Uniquement dans le navigateur de votre appareil ; rien n’est envoyé sur un serveur. Si vous videz les données du navigateur, l’historique est perdu : exportez régulièrement le CSV."],["La lecture de la capture d’écran est fausse, que faire ?","L’OCR peut se tromper sur les chiffres. Relisez et corrigez chaque champ, ou saisissez tout à la main."],["Puis-je installer l’application sur mon téléphone ?","Oui. Dans le menu de votre navigateur, choisissez « Ajouter à l’écran d’accueil » ou « Installer l’application »."],["Fonctionne-t-elle sans connexion ?","Après un premier chargement en ligne, la saisie et la création de reçus fonctionnent hors ligne. L’OCR nécessite une connexion."]],
+faq:[["Puis-je gérer plusieurs entreprises ?","Oui. Dans « Boutique », ajoutez une nouvelle entreprise : chacune garde son nom, son adresse, son NIU/RCCM, son logo et son message de fin de reçu. Changez d’entreprise avec le menu."],["L’application vérifie-t-elle que le paiement a bien été reçu ?","Non. Elle met en forme les informations que vous saisissez. Contrôlez toujours le paiement dans votre application MoMo / OM avant de remettre un reçu."],["Le reçu est-il un document officiel ?","Non. Il est établi par le commerçant et n’a aucune valeur officielle MTN ou Orange. Il ne remplace pas une facture normalisée."],["Où sont enregistrés mes reçus ?","Uniquement dans le navigateur de votre appareil ; rien n’est envoyé sur un serveur. Si vous videz les données du navigateur, l’historique est perdu : exportez régulièrement le CSV."],["La lecture de la capture d’écran est fausse, que faire ?","L’OCR peut se tromper sur les chiffres. Relisez et corrigez chaque champ, ou saisissez tout à la main."],["Puis-je installer l’application sur mon téléphone ?","Oui. Dans le menu de votre navigateur, choisissez « Ajouter à l’écran d’accueil » ou « Installer l’application »."],["Fonctionne-t-elle sans connexion ?","Après un premier chargement en ligne, la saisie et la création de reçus fonctionnent hors ligne. L’OCR nécessite une connexion."]],
 cgu:[["Objet","Amana est un outil gratuit permettant aux commerçants de créer des reçus de paiement. L’utilisation de l’application vaut acceptation des présentes conditions."],["Nature du service","L’application n’est ni un service de paiement ni un établissement financier. Elle n’est affiliée ni à MTN ni à Orange, et ne vérifie, n’exécute ni ne garantit aucune transaction."],["Utilisation autorisée","L’utilisateur s’engage à n’émettre des reçus que pour des paiements réellement reçus et à saisir des informations exactes. Il est interdit d’utiliser l’application pour falsifier une preuve de paiement, tromper un tiers ou commettre une fraude."],["Responsabilité de l’utilisateur","L’utilisateur est seul responsable du contenu des reçus qu’il établit et de leur usage, ainsi que du respect de ses obligations fiscales et comptables."],["Données personnelles","Les informations saisies (boutique, clients, reçus) sont stockées uniquement dans le navigateur de l’utilisateur. L’analyse OCR des images est effectuée sur l’appareil. L’application charge des bibliothèques depuis des réseaux de diffusion (CDN) tiers."],["Limitation de responsabilité","L’application est fournie « en l’état », sans garantie d’exactitude ni de disponibilité. L’éditeur ne peut être tenu responsable des pertes de données, des erreurs de lecture OCR ou des litiges liés aux reçus émis."],["Modification et droit applicable","Ces conditions peuvent être modifiées à tout moment. Elles sont régies par le droit camerounais."]]},
 en:{steps:["Enter your business details (name, city, telephone, tax/trade register number, logo). They are saved on your device.","Record the payment: method, date, customer and TxID. Alternatively, upload an SMS screenshot and the OCR will populate the fields.","Add the items purchased (description, quantity, unit price). The total is computed automatically.","Select the payment status and review the receipt preview.","Share the image (e.g., via WhatsApp), download it, or save the receipt to the history. Select “New receipt” to proceed to the next one."],
 warn:"Before confirming a payment, always verify it in your MTN MoMo / Orange Money application or statement. This application does not verify any payment.",
-faq:[["Does the application verify that a payment has been received?","No. It only formats the information that you enter. Always check the payment in your MoMo / OM application before issuing a receipt."],["Is the receipt an official document?","No. It is issued by the merchant and has no official MTN or Orange standing. It does not replace a standardised invoice."],["Where are my receipts stored?","Exclusively in your device’s browser; nothing is sent to a server. Clearing the browser data erases the history, so export the CSV file regularly."],["The screenshot was read incorrectly. What should I do?","OCR may misread digits. Review and correct each field, or enter everything manually."],["Can I install the application on my phone?","Yes. In your browser menu, select “Add to Home screen” or “Install app”."],["Does it work offline?","After a first online load, data entry and receipt creation are available offline. The OCR feature requires an internet connection."]],
+faq:[["Can I manage several businesses?","Yes. Under “Business details”, add a new business: each keeps its own name, address, tax/trade register number, logo and closing message. Switch between them using the menu."],["Does the application verify that a payment has been received?","No. It only formats the information that you enter. Always check the payment in your MoMo / OM application before issuing a receipt."],["Is the receipt an official document?","No. It is issued by the merchant and has no official MTN or Orange standing. It does not replace a standardised invoice."],["Where are my receipts stored?","Exclusively in your device’s browser; nothing is sent to a server. Clearing the browser data erases the history, so export the CSV file regularly."],["The screenshot was read incorrectly. What should I do?","OCR may misread digits. Review and correct each field, or enter everything manually."],["Can I install the application on my phone?","Yes. In your browser menu, select “Add to Home screen” or “Install app”."],["Does it work offline?","After a first online load, data entry and receipt creation are available offline. The OCR feature requires an internet connection."]],
 cgu:[["Purpose","Amana is a free tool enabling merchants to produce payment receipts. Use of the application constitutes acceptance of these terms."],["Nature of the service","The application is neither a payment service nor a financial institution. It is not affiliated with MTN or Orange, and it neither verifies, executes nor guarantees any transaction."],["Permitted use","Users undertake to issue receipts only for payments actually received and to enter accurate information. Using the application to forge proof of payment, to deceive a third party, or to commit fraud is strictly prohibited."],["User responsibility","The user is solely responsible for the content of the receipts issued and for their use, as well as for compliance with applicable tax and accounting obligations."],["Personal data","Information entered (business, customers, receipts) is stored solely in the user’s browser. OCR analysis of images is performed on the device. The application loads libraries from third-party content delivery networks (CDNs)."],["Limitation of liability","The application is provided “as is”, without any warranty of accuracy or availability. The publisher cannot be held liable for data loss, OCR reading errors, or disputes arising from receipts issued."],["Amendments and governing law","These terms may be amended at any time and are governed by the laws of Cameroon."]]},
 pcm:{steps:["Write di info for your shop (name, town, phone, NIU/RCCM, logo). Di app go keep am for your phone.","Write di payment: how e pay, date, customer and TxID. You fit also put screenshot of di SMS and di app go fill di boxes for you.","Add di things wey customer buy (name, how many, price). Di app go add di total by itself.","Choose di payment status, den look di receipt well.","Send di picture (WhatsApp and so on), download am or keep am for history. Press “New receipt” when you wan make anoda one."],
 warn:"Before you talk say di money don enter, check am first for your MTN MoMo / Orange Money app. Dis app no di check any payment.",
-faq:[["Di app di check say di money don really enter?","No. Di app only arrange di info wey you write. Always check di money for your MoMo / OM app before you give receipt."],["Dis receipt na official paper?","No. Na di seller make am, e no get official value from MTN or Orange. E no fit replace proper invoice."],["Where my receipts di stay?","Only for di browser for your phone. We no send anything go any server. If you clear di browser data, di history go loss, so export di CSV always."],["Di app read di screenshot wrong. Wetin I go do?","Di OCR fit mistake di numbers. Check every box and correct am, or write everything by hand."],["I fit put di app for my phone?","Yes. For your browser menu, press “Add to Home screen” or “Install app”."],["E di work without network?","After you don open am one time with network, you fit write and make receipt without network. Di OCR need network."]],
+faq:[["I fit manage plenty business?","Yes. For “Di shop”, add new shop: each one go keep im name, address, NIU/RCCM, logo and end message. Use di menu change from one to anoda."],["Di app di check say di money don really enter?","No. Di app only arrange di info wey you write. Always check di money for your MoMo / OM app before you give receipt."],["Dis receipt na official paper?","No. Na di seller make am, e no get official value from MTN or Orange. E no fit replace proper invoice."],["Where my receipts di stay?","Only for di browser for your phone. We no send anything go any server. If you clear di browser data, di history go loss, so export di CSV always."],["Di app read di screenshot wrong. Wetin I go do?","Di OCR fit mistake di numbers. Check every box and correct am, or write everything by hand."],["I fit put di app for my phone?","Yes. For your browser menu, press “Add to Home screen” or “Install app”."],["E di work without network?","After you don open am one time with network, you fit write and make receipt without network. Di OCR need network."]],
 cgu:[["Wetin dis app be","Amana na free tool wey help sellers make payment receipts. If you use di app, e mean say you agree with dis rules."],["Wetin di app no be","Di app no be payment service and e no be bank. E no get link with MTN or Orange, and e no di check, no di do and no di guarantee any transaction."],["How you must use am","You must make receipt only for money wey don really enter and write true information. Na serious offence to use di app make fake proof of payment, deceive somebody or do fraud."],["Your own responsibility","Na you alone carry di responsibility for di receipts wey you make and how you use dem, and for your tax and accounting duty."],["Your information","Di info wey you write (shop, customers, receipts) stay only for your browser. Di OCR di read di image for your phone. Di app di load some libraries from third-party CDN networks."],["Where we no carry blame","Di app dey “as e dey”, no guarantee say e correct or e go always dey. Di owner no go carry blame for lost data, OCR mistakes or quarrel wey come from receipts you make."],["Changes and law","We fit change dis rules any time. Cameroon law dey rule dem."]]}};
 let tab='usage';
 function info(){const D=INFO[lang],tb=$('tabs'),b=$('info');tb.innerHTML='';b.innerHTML='';
@@ -193,6 +211,7 @@ function update(){
   $('o-store').textContent=$('store').value||'MA BOUTIQUE';
   $('o-city').textContent=$('city').value;
   $('o-contact').textContent=[$('tel').value,$('niu').value].filter(Boolean).join(' · ');
+  const mg=$('msg').value;$('o-msg').textContent=mg;$('o-msg').hidden=!mg;
   $('o-num').textContent=num();$('o-date').textContent=$('date').value||'-';
   const m=$('method').value;$('o-meth').textContent=t(m);
   $('o-txid').textContent=$('txid').value;$('o-txrow').hidden=!$('txid').value;
@@ -204,7 +223,7 @@ function update(){
   const s=$('status').value,st=$('o-status');st.textContent=ICO[s]+t(stKey(s));st.style.color=COL[s];
   const lg=$('o-logo');lg.hidden=!logoData;if(logoData)lg.src=logoData;
   const q=$('qr');q.innerHTML='';try{new QRCode(q,{text:[num(),$('txid').value,total(),$('store').value].join('|'),width:72,height:72})}catch(e){}
-  ls('shop',{store:$('store').value,city:$('city').value,tel:$('tel').value,niu:$('niu').value,logo:logoData,method:m})}
+  saveProf();renderProf()}
 
 /* Logo */
 function logo(e){const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{
@@ -231,6 +250,53 @@ function csv(){const h=ls('hist')||[],q=v=>'"'+String(v??'').replace(/"/g,'""')+
   down(new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),'recus.csv')}
 function down(blob,name){const a=mk('a',{href:URL.createObjectURL(blob),download:name});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
 
+/* Export Excel (.xlsx) : tableaux filtrables, formules, synthèse */
+const XL={fr:{recus:'Reçus',art:'Articles',syn:'Synthèse',h:['N°','Date','Entreprise','Client','Mode','TxID','Statut','Articles','Total (FCFA)'],ah:['N°','Date','Client','Article','Qté','Prix unitaire','Total ligne'],title:'Amana – Synthèse des ventes',tot:'Total des reçus',conf:'Ventes confirmées',nb:'Nombre de reçus',avg:'Panier moyen',byM:'Par mode de paiement',byS:'Par statut',byB:'Par entreprise',cnt:'Nombre',amt:'Montant (FCFA)'},
+en:{recus:'Receipts',art:'Items',syn:'Summary',h:['No.','Date','Business','Customer','Method','TxID','Status','Items','Total (FCFA)'],ah:['No.','Date','Customer','Item','Qty','Unit price','Line total'],title:'Amana – Sales summary',tot:'Total of receipts',conf:'Confirmed sales',nb:'Number of receipts',avg:'Average basket',byM:'By payment method',byS:'By status',byB:'By business',cnt:'Count',amt:'Amount (FCFA)'}};
+const loadScript=u=>new Promise((ok,ko)=>{if(window.ExcelJS)return ok();document.head.append(mk('script',{src:u,crossOrigin:'anonymous',onload:ok,onerror:ko}))});
+async function xlsx(){
+  const h=ls('hist')||[];if(!h.length){alert(t('empty'));return}
+  try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js')}catch(e){alert(t('xlErr'));return}
+  const X=XL[lang]||XL.en,NAVY='FF072652',SOFT='FFEAF0F9',nf='#,##0',fill=a=>({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+  const rows=[...h].sort((a,b)=>a.n-b.n),id=r=>'REC-'+String(r.n).padStart(4,'0');
+  const dt=v=>{const m=/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})/.exec(v||'');return m?new Date(Date.UTC(+m[3],m[2]-1,+m[1],+m[4],+m[5])):(v||'')};
+  const head=(ws,n)=>{const r=ws.getRow(1);r.height=24;for(let c=1;c<=n;c++){const x=r.getCell(c);x.font={bold:true,color:{argb:'FFFFFFFF'}};x.fill=fill(NAVY);x.alignment={vertical:'middle'}}};
+  const wb=new ExcelJS.Workbook();wb.creator='Amana';wb.calcProperties={fullCalcOnLoad:true};
+  const s3=wb.addWorksheet(X.syn,{properties:{tabColor:{argb:'FFFF7D01'}}});
+
+  /* Feuille 1 : reçus (tableau Excel : filtres, lignes alternées, s'étend tout seul) */
+  const w1=wb.addWorksheet(X.recus,{views:[{state:'frozen',ySplit:1}]});
+  w1.addTable({name:'TblRecus',ref:'A1',headerRow:true,totalsRow:false,style:{theme:'TableStyleMedium2',showRowStripes:true},
+    columns:X.h.map(n=>({name:n,filterButton:true})),
+    rows:rows.map(r=>[id(r),dt(r.date),r.store,r.client,t(r.method),r.txid,t(stKey(r.status)),r.items.map(i=>`${i.q}x ${i.n}`).join(' + '),r.total])});
+  [12,18,24,24,20,20,24,44,16].forEach((w,i)=>w1.getColumn(i+1).width=w);
+  rows.forEach((_,i)=>{w1.getCell(i+2,2).numFmt='dd/mm/yyyy hh:mm';w1.getCell(i+2,9).numFmt=nf});head(w1,9);
+
+  /* Feuille 2 : une ligne par article, total ligne = formule */
+  const L2=[];rows.forEach(r=>r.items.filter(i=>i.n||+i.p).forEach(i=>L2.push([id(r),dt(r.date),r.client,i.n,+i.q||0,+i.p||0,0])));
+  if(L2.length){const w2=wb.addWorksheet(X.art,{views:[{state:'frozen',ySplit:1}]});
+    w2.addTable({name:'TblArticles',ref:'A1',headerRow:true,totalsRow:false,style:{theme:'TableStyleMedium2',showRowStripes:true},columns:X.ah.map(n=>({name:n,filterButton:true})),rows:L2});
+    [12,18,24,32,8,16,16].forEach((w,i)=>w2.getColumn(i+1).width=w);
+    L2.forEach((l,i)=>{const n=i+2;w2.getCell(n,2).numFmt='dd/mm/yyyy hh:mm';w2.getCell(n,6).numFmt=nf;
+      const c=w2.getCell(n,7);c.value={formula:`E${n}*F${n}`,result:l[4]*l[5]};c.numFmt=nf});head(w2,7)}
+
+  /* Feuille de synthèse : tout est calculé par formules sur la feuille des reçus */
+  const R=`'${X.recus}'!`;
+  s3.getColumn(1).width=32;s3.getColumn(2).width=16;s3.getColumn(3).width=22;
+  s3.mergeCells('A1:C1');const T=s3.getCell('A1');T.value=X.title;T.font={bold:true,size:14,color:{argb:'FFFFFFFF'}};T.fill=fill(NAVY);T.alignment={vertical:'middle'};s3.getRow(1).height=30;
+  [[X.tot,`SUM(${R}I:I)`,nf],[X.conf,`SUMIF(${R}G:G,"${t('sOk')}",${R}I:I)`,nf],[X.nb,`COUNTA(${R}A:A)-1`,'0'],[X.avg,'IFERROR(B3/B5,0)',nf]].forEach(([l,f,fm],i)=>{
+    const a=s3.getCell(i+3,1),b=s3.getCell(i+3,2);a.value=l;a.font={bold:true};a.fill=fill(SOFT);b.value={formula:f};b.numFmt=fm;b.font={bold:true,size:12};b.alignment={horizontal:'right'}});
+  let row=8;
+  const block=(title,col,labels)=>{[title,X.cnt,X.amt].forEach((v,i)=>{const c=s3.getCell(row,i+1);c.value=v;c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill=fill(NAVY)});row++;
+    labels.forEach(l=>{s3.getCell(row,1).value=l;s3.getCell(row,2).value={formula:`COUNTIF(${R}${col}:${col},A${row})`};
+      const c=s3.getCell(row,3);c.value={formula:`SUMIF(${R}${col}:${col},A${row},${R}I:I)`};c.numFmt=nf;row++});row++};
+  block(X.byM,'E',['mtn','om','cash','bank','card'].map(t));
+  block(X.byS,'G',['sOk','sPend','sChk'].map(t));
+  block(X.byB,'C',[...new Set(rows.map(r=>r.store).filter(Boolean))]);
+
+  const buf=await wb.xlsx.writeBuffer();
+  down(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`Amana_${new Date().toISOString().slice(0,10)}.xlsx`)}
+
 /* Image : partage / téléchargement */
 const snap=()=>html2canvas($('receipt'),{scale:2,backgroundColor:'#fff'}).then(c=>new Promise(r=>c.toBlob(r,'image/png')));
 async function dlImg(){save();down(await snap(),num()+'.png')}
@@ -241,17 +307,60 @@ function waText(){save();const l=items.filter(i=>i.n||+i.p).map(i=>`• ${i.q||1
   const m=`*--- ${t('wa')} - ${$('store').value} ---*\n${num()} | ${$('date').value}\n👤 *${t('rCli')}* ${$('client').value}\n${l}\n💰 *${t('rTot')} :* ${fmt(total())}\n🔢 *${t('rTx')}* ${$('txid').value}\n*${$('o-status').textContent}*`;
   window.open('https://wa.me/?text='+encodeURIComponent(m),'_blank')}
 
+/* Entreprises */
+let profs=ls('profs')||[],pid=ls('pid');
+function migrate(){if(!profs.length){const o=ls('shop')||{};profs=[{id:Date.now(),store:o.store||'',city:o.city||'',tel:o.tel||'',niu:o.niu||'',logo:o.logo||null,msg:'',method:o.method||'mtn'}]}
+  if(!profs.find(p=>p.id===pid))pid=profs[0].id}
+const P=()=>profs.find(p=>p.id===pid);
+function loadProf(){const p=P();['store','city','tel','niu','msg'].forEach(k=>$(k).value=p[k]||'');logoData=p.logo||null;$('method').value=p.method||'mtn'}
+function saveProf(){const p=P();if(!p)return;['store','city','tel','niu','msg'].forEach(k=>p[k]=$(k).value);p.logo=logoData;p.method=$('method').value;ls('profs',profs);ls('pid',pid)}
+function renderProf(){const s=$('prof');s.innerHTML='';profs.forEach((p,i)=>s.append(mk('option',{value:p.id,textContent:p.store||`${t('company')} ${i+1}`,selected:p.id===pid})))}
+function setProf(v){saveProf();pid=+v;loadProf();update()}
+function addProf(){saveProf();profs.push({id:Date.now(),store:'',city:'',tel:'',niu:'',logo:null,msg:'',method:'mtn'});pid=profs[profs.length-1].id;loadProf();update()}
+function delProf(){if(profs.length<2||!confirm(t('confP')))return;profs=profs.filter(p=>p.id!==pid);pid=profs[0].id;loadProf();update()}
+
+/* PDF */
+async function dlPdf(){save();const c=await html2canvas($('receipt'),{scale:2,backgroundColor:'#fff'}),w=80,h=w*c.height/c.width;
+  const d=new window.jspdf.jsPDF({unit:'mm',format:[w+10,h+10]});d.addImage(c.toDataURL('image/png'),'PNG',5,5,w,h);d.save(num()+'.pdf')}
+
 /* OCR */
-async function ocr(e){const f=e.target.files[0];if(!f)return;const s=$('ocr');s.textContent=t('ocrW');
-  try{const r=await Tesseract.recognize(f,'fra+eng');parse(r.data.text);s.textContent=t('ocrO')}catch(x){console.error(x);s.textContent=t('ocrE')}
+async function prep(file,deg){
+  const bmp=await createImageBitmap(file),r=deg%180!==0,k=Math.min(2,1800/Math.max(bmp.width,bmp.height)),w=Math.round(bmp.width*k),h=Math.round(bmp.height*k);
+  const c=mk('canvas',{width:r?h:w,height:r?w:h}),x=c.getContext('2d');
+  x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(bmp,-w/2,-h/2,w,h);
+  const d=x.getImageData(0,0,c.width,c.height),p=d.data;
+  for(let i=0;i<p.length;i+=4){const g=Math.max(0,Math.min(255,(.299*p[i]+.587*p[i+1]+.114*p[i+2]-120)*1.5+120));p[i]=p[i+1]=p[i+2]=g}
+  x.putImageData(d,0,0);return c}
+async function ocr(e){
+  const f=e.target.files[0];if(!f)return;const s=$('ocr');let best={txt:'',sc:-1},wk;
+  try{
+    wk=await Tesseract.createWorker('fra+eng');
+    for(const [i,deg] of [0,90,270,180].entries()){
+      s.textContent=`${t('ocrW')} (${i+1}/4)`;
+      const r=await wk.recognize(await prep(f,deg)),txt=r.data.text||'';
+      const sc=r.data.confidence+(/XAF|FCFA|d[ée]p[ôo]t|transaction|montant|retrait/i.test(txt)?40:0);
+      if(sc>best.sc)best={txt,sc};
+      if(sc>=100)break}
+    showOcr(best.txt)
+  }catch(x){console.error(x);s.textContent=t('ocrE')}
+  finally{if(wk)wk.terminate()}
   e.target.value=''}
-function parse(x){
-  if(/orange/i.test(x))$('method').value='om';else if(/momo|mtn/i.test(x))$('method').value='mtn';
-  const a=x.match(/(?:montant|pay[ée]|re[çc]u|envoy[ée]|transf[ée]r[ée])\D{0,25}(\d[\d\s.,]*)\s*(?:FCFA|XAF|F\b)/i)||x.match(/(\d[\d\s.,]*)\s*(?:FCFA|XAF)/i);
-  if(a){const c=a[1].trim().replace(/[.,]\d{1,2}$/,'').replace(/\D/g,'');if(c&&items.length===1&&!+items[0].p){items[0].p=c;items[0].q=1;rows()}}
-  const tx=x.match(/(?:Trans(?:action)?\s*(?:ID|Id)?|TxId|ID)\s*[:.]?\s*([A-Za-z0-9.]{6,})/i);if(tx)$('txid').value=tx[1];
-  const c=x.match(/(?:de la part de|de|par)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){1,3})/);if(c)$('client').value=c[1].trim();
-  update()}
+function showOcr(txt,quiet){const n=parse(txt);
+  if(!quiet){$('ocrOut').textContent=txt;$('ocrTxt').hidden=false}
+  $('ocr').textContent=n?t('ocrO').replace('{n}',n):t('ocrNone')}
+function readTxt(){showOcr($('smsTxt').value,true)}
+function parse(x){let n=0;
+  if(/orange/i.test(x)){$('method').value='om';n++}else if(/mobile\s*money|momo|mtn/i.test(x)){$('method').value='mtn';n++}
+  const a=x.match(/(?:d[ée]p[ôo]t|retrait|montant|pay[ée]|re[çc]u|envoy[ée]|transf[ée]r[ée])\D{0,15}?(\d[\d\s.,]*)\s*(?:FCFA|XAF|F\b)/i)||x.match(/(\d[\d\s.,]*)\s*(?:FCFA|XAF)/i);
+  if(a){const c=a[1].trim().replace(/[.,]\d{1,2}$/,'').replace(/\D/g,'');if(c&&items.length===1&&!+items[0].p){items[0].p=c;items[0].q=1;rows();n++}}
+  const d=x.match(/(\d{4})-(\d{2})-(\d{2})[ T]+(\d{1,2}:\d{2})/),d2=x.match(/(\d{2})[\/.-](\d{2})[\/.-](\d{4})[ ,]+(\d{1,2}:\d{2})/);
+  if(d){$('date').value=`${d[3]}/${d[2]}/${d[1]} ${d[4].padStart(5,'0')}`;n++}
+  else if(d2){$('date').value=`${d2[1]}/${d2[2]}/${d2[3]} ${d2[4].padStart(5,'0')}`;n++}
+  const tx=x.match(/\b(?:Trans(?:action)?\s*(?:ID|Id)?|TxId|R[ée]f(?:[ée]rence)?|ID)\b\s*[:.]?\s*((?=[A-Za-z.]*\d)[A-Za-z0-9.]{6,})/i);
+  if(tx){$('txid').value=tx[1];n++}
+  const c=x.match(/\bau\s+((?:[A-ZÀ-Ý][A-Za-zÀ-ÿ'’-]+\s+){1,3}[A-ZÀ-Ý][A-Za-zÀ-ÿ'’-]+)/)||x.match(/(?:de la part de|par)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){1,3})/);
+  if(c){$('client').value=c[1].replace(/\s+/g,' ').trim();n++}
+  update();return n}
 
 /* Thème */
 let theme=ls('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
@@ -259,9 +368,7 @@ function applyTheme(){document.documentElement.dataset.theme=theme;$('tb').textC
 function toggleTheme(){theme=theme==='dark'?'light':'dark';ls('theme',theme);applyTheme()}
 
 /* Init */
-const sh=ls('shop')||{};
-$('store').value=sh.store||'';$('city').value=sh.city||'';$('tel').value=sh.tel||'';$('niu').value=sh.niu||'';
-if(sh.method)$('method').value=sh.method;logoData=sh.logo||null;$('date').value=nowStr();
+migrate();loadProf();$('date').value=nowStr();
 applyTheme();applyLang();
 if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
